@@ -1,0 +1,44 @@
+<aside class="drawer" role="dialog" aria-label="炭窑操作">
+  <header class="drawer-head">
+    <h2>{{ clamp.code }}</h2>
+    <button type="button" class="icon-close" onclick="closeDrawer()" aria-label="关闭">×</button>
+  </header>
+  <div class="drawer-body">
+    <p class="drawer-lead">
+      {{ clamp.site.name }} · {{ clamp.wood_species or '材种未填' }}
+      · 当前 <span class="badge badge-{{ clamp.status }}">{{ status_labels.get(clamp.status, clamp.status) }}</span>
+    </p>
+    {% if clamp.notes %}
+    <p class="hint">{{ clamp.notes }}</p>
+    {% endif %}
+
+    <div class="drawer-actions-stack">
+      <button
+        type="button"
+        class="btn"
+        hx-get="/drawer/shift-new?clamp_id={{ clamp.id }}"
+        hx-target="#drawer-root"
+        hx-swap="innerHTML"
+      >为本窑登记班次</button>
+
+      {% if clamp.status != 'drawn' %}
+      <form method="post" action="/clamps/{{ clamp.id }}/status">
+        <input type="hidden" name="status" value="drawn" />
+        <button type="submit" class="btn {% if not can_drawn %}is-disabled{% endif %}" {% if not can_drawn %}disabled{% endif %}>
+          标记已出炭
+        </button>
+      </form>
+      {% if not can_drawn %}
+      <p class="hint warn">{{ drawn_msg }}</p>
+      {% else %}
+      <p class="hint">最近班次峰值已达标（≥ 400℃），可标记出炭。</p>
+      {% endif %}
+      {% else %}
+      <form method="post" action="/clamps/{{ clamp.id }}/status">
+        <input type="hidden" name="status" value="stacked" />
+        <button type="submit" class="btn ghost">重置为已码窑</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</aside>

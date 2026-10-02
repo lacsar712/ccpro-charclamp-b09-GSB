@@ -1,0 +1,32 @@
+<aside class="drawer" role="dialog" aria-label="登记焖烧班次">
+  <header class="drawer-head">
+    <h2>登记焖烧班次</h2>
+    <button type="button" class="icon-close" onclick="closeDrawer()" aria-label="关闭">×</button>
+  </header>
+  <form class="drawer-body" method="post" action="/shifts/new">
+    <label>炭窑
+      <select name="clamp_id" required>
+        {% for clamp in clamps %}
+        <option value="{{ clamp.id }}" {% if preselect_clamp_id == clamp.id %}selected{% endif %}>{{ clamp.code }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>开始时间
+      <input name="started_at" type="datetime-local" />
+    </label>
+    <label>峰值温度 ℃（可空）
+      <input name="peak_temp_c" type="number" step="0.1" />
+    </label>
+    <label>炭品等级
+      <input name="charcoal_grade" value="B" />
+    </label>
+    <label>备注
+      <textarea name="notes" rows="3"></textarea>
+    </label>
+    <p class="hint">出炭要求最近班次峰值 ≥ 400℃；本表只登记班次。</p>
+    <div class="actions">
+      <button type="submit">写入时间轴</button>
+      <button type="button" class="btn ghost" onclick="closeDrawer()">取消</button>
+    </div>
+  </form>
+</aside>

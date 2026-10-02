@@ -1,0 +1,60 @@
+<section class="kiln-row" aria-label="炭窑筛选">
+  <a
+    class="kiln-chip {% if not active_clamp_id %}is-active{% endif %}"
+    href="/"
+    hx-get="/timeline/partial"
+    hx-target="#board"
+    hx-swap="innerHTML"
+    hx-push-url="/"
+  >
+    <span class="kiln-svg kiln-all" aria-hidden="true">
+      <svg viewBox="0 0 48 56" width="40" height="46"><path d="M8 48 L14 18 Q24 6 34 18 L40 48 Z" fill="currentColor" opacity=".35"/><path d="M16 48 V22 Q24 12 32 22 V48" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+    </span>
+    <span class="kiln-meta">
+      <strong>全部窑</strong>
+      <em>时间轴总览</em>
+    </span>
+  </a>
+  {% for clamp in clamps %}
+  <a
+    class="kiln-chip status-{{ clamp.status }} {% if active_clamp_id == clamp.id %}is-active{% endif %}"
+    href="/?clamp_id={{ clamp.id }}"
+    hx-get="/timeline/partial?clamp_id={{ clamp.id }}"
+    hx-target="#board"
+    hx-swap="innerHTML"
+    hx-push-url="/?clamp_id={{ clamp.id }}"
+    title="{{ status_labels.get(clamp.status, clamp.status) }}"
+  >
+    <span class="kiln-svg" aria-hidden="true">
+      <svg viewBox="0 0 48 56" width="44" height="50">
+        <path class="kiln-body" d="M10 50 L15 22 Q24 8 33 22 L38 50 Z" />
+        <path class="kiln-mouth" d="M20 50 V28 Q24 22 28 28 V50" />
+        <circle class="kiln-glow" cx="24" cy="34" r="4" />
+        <text x="24" y="14" text-anchor="middle" class="kiln-code-svg">{{ clamp.code[-1] }}</text>
+      </svg>
+    </span>
+    <span class="kiln-meta">
+      <strong>{{ clamp.code }}</strong>
+      <em>{{ status_labels.get(clamp.status, clamp.status) }} · {{ clamp.wood_species or '—' }}</em>
+    </span>
+  </a>
+  {% endfor %}
+</section>
+
+<header class="timeline-head">
+  <div>
+    <h1>焖烧时间轴</h1>
+    <p>点击上方窑剪影筛选班次；登记与出炭在侧抽屉完成，不另开列表页。</p>
+  </div>
+  {% if active_clamp_id %}
+  <button
+    type="button"
+    class="btn ghost"
+    hx-get="/drawer/clamp/{{ active_clamp_id }}"
+    hx-target="#drawer-root"
+    hx-swap="innerHTML"
+  >操作当前窑</button>
+  {% endif %}
+</header>
+
+{% include "partials/timeline_feed.html" %}

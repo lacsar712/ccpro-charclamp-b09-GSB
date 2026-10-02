@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: charclamp
+      POSTGRES_USER: charclamp
+      POSTGRES_PASSWORD: charclamp
+    ports:
+      - "6520:5432"
+    volumes:
+      - charclamp_5120_6520_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U charclamp -d charclamp"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  web:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://charclamp:charclamp@db:5432/charclamp
+      DATABASE_URL_SYNC: postgresql+psycopg2://charclamp:charclamp@db:5432/charclamp
+      SECRET_KEY: charclamp-dev-secret
+    ports:
+      - "5120:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+volumes:
+  charclamp_5120_6520_pg:

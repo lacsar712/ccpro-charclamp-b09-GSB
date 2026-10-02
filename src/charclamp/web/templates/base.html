@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}CharClamp{% endblock %} · 炭窑焖烧志</title>
+  <link rel="stylesheet" href="/static/css/theme.css" />
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand-block">
+        <span class="ember"></span>
+        <div>
+          <strong>CharClamp</strong>
+          <small>{% block site_label %}乌石岗焖烧坞{% endblock %}</small>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        {% block top_actions %}{% endblock %}
+        {% if user %}
+        <a class="link-quiet" href="/logout">退出 {{ user.username }}</a>
+        {% endif %}
+      </div>
+    </header>
+
+    {% if flash %}
+    <div class="flash flash-{{ flash_cat or 'ok' }}" id="flash">{{ flash }}</div>
+    {% endif %}
+
+    <div class="stage">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <div id="drawer-root" class="drawer-root" aria-live="polite"></div>
+  <div
+    id="drawer-backdrop"
+    class="drawer-backdrop"
+    hx-on:click="document.getElementById('drawer-root').innerHTML=''; this.classList.remove('open')"
+  ></div>
+  <script>
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+      if (evt.detail.target && evt.detail.target.id === 'drawer-root') {
+        document.getElementById('drawer-backdrop').classList.add('open');
+        document.getElementById('drawer-root').classList.add('open');
+      }
+    });
+    function closeDrawer() {
+      document.getElementById('drawer-root').innerHTML = '';
+      document.getElementById('drawer-root').classList.remove('open');
+      document.getElementById('drawer-backdrop').classList.remove('open');
+    }
+  </script>
+</body>
+</html>

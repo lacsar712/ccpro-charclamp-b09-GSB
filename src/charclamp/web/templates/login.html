@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>登录 · CharClamp</title>
+  <link rel="stylesheet" href="/static/css/theme.css" />
+</head>
+<body class="login-body">
+  <form class="login-card" method="post" action="/login">
+    <h1>CharClamp</h1>
+    <p>炭窑焖烧志</p>
+    {% if flash %}
+    <div class="flash flash-{{ flash_cat or 'error' }}">{{ flash }}</div>
+    {% endif %}
+    <label>用户名
+      <input name="username" value="admin" autocomplete="username" required />
+    </label>
+    <label>密码
+      <input name="password" type="password" value="123456" autocomplete="current-password" required />
+    </label>
+    <button type="submit">进入窑场</button>
+    <p class="hint">演示账号：admin / 123456 · worker / 123456</p>
+  </form>
+</body>
+</html>

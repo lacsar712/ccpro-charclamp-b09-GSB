@@ -1,0 +1,44 @@
+<ol class="timeline" aria-label="焖烧班次时间轴">
+  {% for shift in shifts %}
+  <li class="timeline-item">
+    <div class="timeline-rail" aria-hidden="true">
+      <span class="timeline-dot status-{{ shift.clamp.status }}"></span>
+    </div>
+    <article class="timeline-card">
+      <header class="timeline-card-head">
+        <button
+          type="button"
+          class="clamp-badge"
+          hx-get="/drawer/clamp/{{ shift.clamp.id }}"
+          hx-target="#drawer-root"
+          hx-swap="innerHTML"
+        >{{ shift.clamp.code }}</button>
+        <time datetime="{{ shift.started_at.isoformat() }}">
+          {{ shift.started_at.strftime('%Y-%m-%d %H:%M') }}
+        </time>
+      </header>
+      <div class="timeline-card-body">
+        <div class="metric">
+          <span>峰值</span>
+          <strong>{% if shift.peak_temp_c is not none %}{{ '%.0f'|format(shift.peak_temp_c) }}℃{% else %}未测{% endif %}</strong>
+        </div>
+        <div class="metric">
+          <span>炭品</span>
+          <strong>{{ shift.charcoal_grade }}</strong>
+        </div>
+        <div class="metric">
+          <span>窑态</span>
+          <strong class="badge badge-{{ shift.clamp.status }}">{{ status_labels.get(shift.clamp.status, shift.clamp.status) }}</strong>
+        </div>
+      </div>
+      {% if shift.notes %}
+      <p class="timeline-note">{{ shift.notes }}</p>
+      {% endif %}
+    </article>
+  </li>
+  {% else %}
+  <li class="timeline-empty">
+    <p>该筛选下暂无焖烧班次。点击「登记班次」写入第一条。</p>
+  </li>
+  {% endfor %}
+</ol>

@@ -4,7 +4,12 @@
     <div class="timeline-rail" aria-hidden="true">
       <span class="timeline-dot status-{{ shift.clamp.status }}"></span>
     </div>
-    <article class="timeline-card">
+    <article
+      class="timeline-card"
+      data-clamp-id="{{ shift.clamp.id }}"
+      data-grade="{{ shift.charcoal_grade }}"
+      data-clamp-status="{{ shift.clamp.status }}"
+    >
       <header class="timeline-card-head">
         <button
           type="button"
@@ -38,7 +43,11 @@
   </li>
   {% else %}
   <li class="timeline-empty">
+    {% if active_grade is not none %}
+    <p>炭品「{{ active_grade }}」精确筛无命中班次，三组数均为 0。点击「登记班次」写入第一条。</p>
+    {% else %}
     <p>该筛选下暂无焖烧班次。点击「登记班次」写入第一条。</p>
+    {% endif %}
   </li>
   {% endfor %}
 </ol>

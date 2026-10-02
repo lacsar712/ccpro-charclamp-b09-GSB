@@ -144,6 +144,106 @@ body {
   color: var(--muted);
 }
 
+/* —— kiln silhouettes lit by grade filter —— */
+.kiln-chip.is-lit {
+  border-color: rgba(224, 122, 47, 0.65);
+  box-shadow: 0 0 0 1px rgba(224, 122, 47, 0.25), 0 6px 18px rgba(224, 122, 47, 0.12);
+}
+
+.kiln-chip.is-lit .kiln-svg { color: var(--ember); }
+
+.kiln-chip.is-burning {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 1px rgba(224, 122, 47, 0.5), 0 0 22px rgba(224, 122, 47, 0.35);
+}
+
+.kiln-chip.is-burning .kiln-glow {
+  fill: #fbbf24;
+  filter: drop-shadow(0 0 9px #f59e0b);
+}
+
+/* —— grade exact filter row —— */
+.grade-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 2px 14px;
+  margin-top: -6px;
+}
+
+.grade-row-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-right: 2px;
+}
+
+.grade-chip {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: linear-gradient(165deg, #221c16, #15120f);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.grade-chip:hover { border-color: var(--ember); }
+
+.grade-chip.is-active {
+  border-color: var(--ember);
+  background: rgba(224, 122, 47, 0.16);
+  box-shadow: 0 0 0 1px rgba(224, 122, 47, 0.35);
+  color: #ffedd5;
+}
+
+.grade-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.grade-form input {
+  padding: 7px 10px;
+  width: 220px;
+  font-size: 0.9rem;
+}
+
+.grade-form .btn { padding: 7px 14px; }
+
+/* —— grade filter stats —— */
+.grade-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+
+.grade-stat {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.grade-stat-label { color: var(--muted); font-size: 0.85rem; }
+
+.grade-stat-value {
+  font-size: 1.35rem;
+  color: var(--ember);
+  font-variant-numeric: tabular-nums;
+}
+
+.grade-stat-unit { color: var(--muted); font-size: 0.8rem; }
+
 .timeline-head {
   display: flex;
   align-items: flex-end;
@@ -461,4 +561,6 @@ input, select, textarea {
 @media (max-width: 640px) {
   .timeline-head { flex-direction: column; align-items: stretch; }
   .kiln-chip { min-width: 132px; }
+  .grade-form { margin-left: 0; width: 100%; }
+  .grade-form input { flex: 1; width: auto; }
 }

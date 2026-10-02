@@ -6,15 +6,16 @@ services:
       POSTGRES_USER: charclamp
       POSTGRES_PASSWORD: charclamp
     ports:
-      - "6520:5432"
+      - "6530:5432"
     volumes:
-      - charclamp_5120_6520_pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U charclamp -d charclamp"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 40s
+      - charclamp_5130_6530_pg:/var/lib/postgresql/data
+    # 首次 initdb 时频繁 healthcheck 会卡住临时库关停，故改为仅等容器启动
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U charclamp -d charclamp"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 30
+    #   start_period: 40s
 
   web:
     build: .
@@ -23,12 +24,11 @@ services:
       DATABASE_URL_SYNC: postgresql+psycopg2://charclamp:charclamp@db:5432/charclamp
       SECRET_KEY: charclamp-dev-secret
     ports:
-      - "5120:8000"
+      - "5130:8000"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     volumes:
       - .:/app
 
 volumes:
-  charclamp_5120_6520_pg:
+  charclamp_5130_6530_pg:

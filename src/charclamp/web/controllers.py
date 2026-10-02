@@ -47,7 +47,15 @@ def _parse_optional_int(raw: str | None) -> int | None:
         return None
 
 
-async def _load_timeline_context(clamp_id: int | None = None) -> dict[str, Any]:
+def _parse_optional_grade(raw: str | None) -> str | None:
+    """炭品精确筛参数：去首尾空白；空串视为未筛选。"""
+    if raw is None:
+        return None
+    grade = raw.strip()
+    return grade or None
+
+
+async def _load_timeline_context(clamp_id: int | None = None, grade: str | None = None) -> dict[str, Any]:
     async with SessionLocal() as db:
         clamps = list(
             (
@@ -67,12 +75,46 @@ async def _load_timeline_context(clamp_id: int | None = None) -> dict[str, Any]:
         )
         if clamp_id is not None:
             query = query.where(BurnShift.clamp_id == clamp_id)
+        if grade is not None:
+            # 精确匹配：整串相等，不做包含/前缀匹配（"A" 不命中 "A+"）。
+            query = query.where(BurnShift.charcoal_grade == grade)
         shifts = list((await db.execute(query)).scalars().all())
+        grade_options = list(
+            (
+                await db.execute(
+                    select(BurnShift.charcoal_grade).distinct().order_by(BurnShift.charcoal_grade)
+                )
+            )
+            .scalars()
+            .all()
+        )
         site_name = clamps[0].site.name if clamps else "乌石岗焖烧坞"
+    # 三组数与筛后卡片同源：全部从本次查询命中的 shifts 推导，
+    # 并发写入时也不会出现「卡片数、剪影点亮、焖烧中点亮」各算各的快照。
+    # 未启用炭品筛选时三组数恒为 0，且不点亮任何窑剪影。
+    if grade is not None:
+        lit_clamp_ids = {shift.clamp_id for shift in shifts}
+        burning_clamp_ids = {
+            shift.clamp_id for shift in shifts if shift.clamp.status == Clamp.STATUS_BURNING
+        }
+        grade_stats = {
+            "shifts": len(shifts),
+            "clamps": len(lit_clamp_ids),
+            "burning": len(burning_clamp_ids),
+        }
+    else:
+        lit_clamp_ids = set()
+        burning_clamp_ids = set()
+        grade_stats = {"shifts": 0, "clamps": 0, "burning": 0}
     return {
         "clamps": clamps,
         "shifts": shifts,
         "active_clamp_id": clamp_id,
+        "active_grade": grade,
+        "grade_options": grade_options,
+        "grade_stats": grade_stats,
+        "lit_clamp_ids": lit_clamp_ids,
+        "burning_clamp_ids": burning_clamp_ids,
         "status_labels": STATUS_LABELS,
         "site_name": site_name,
     }
@@ -123,7 +165,8 @@ class TimelineController(Controller):
             return Redirect("/login")
         flash, flash_cat = _pop_flash(request)
         clamp_id = _parse_optional_int(request.query_params.get("clamp_id"))
-        ctx = await _load_timeline_context(clamp_id)
+        grade = _parse_optional_grade(request.query_params.get("grade"))
+        ctx = await _load_timeline_context(clamp_id, grade)
         return Template(
             template_name="timeline.html",
             context={
@@ -139,7 +182,8 @@ class TimelineController(Controller):
         if not request.user:
             return Redirect("/login")
         clamp_id = _parse_optional_int(request.query_params.get("clamp_id"))
-        ctx = await _load_timeline_context(clamp_id)
+        grade = _parse_optional_grade(request.query_params.get("grade"))
+        ctx = await _load_timeline_context(clamp_id, grade)
         return Template(
             template_name="partials/board.html",
             context={

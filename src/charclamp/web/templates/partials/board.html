@@ -1,11 +1,11 @@
 <section class="kiln-row" aria-label="炭窑筛选">
   <a
     class="kiln-chip {% if not active_clamp_id %}is-active{% endif %}"
-    href="/"
-    hx-get="/timeline/partial"
+    href="/{% if active_grade %}?grade={{ active_grade|urlencode }}{% endif %}"
+    hx-get="/timeline/partial{% if active_grade %}?grade={{ active_grade|urlencode }}{% endif %}"
     hx-target="#board"
     hx-swap="innerHTML"
-    hx-push-url="/"
+    hx-push-url="/{% if active_grade %}?grade={{ active_grade|urlencode }}{% endif %}"
   >
     <span class="kiln-svg kiln-all" aria-hidden="true">
       <svg viewBox="0 0 48 56" width="40" height="46"><path d="M8 48 L14 18 Q24 6 34 18 L40 48 Z" fill="currentColor" opacity=".35"/><path d="M16 48 V22 Q24 12 32 22 V48" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -17,13 +17,14 @@
   </a>
   {% for clamp in clamps %}
   <a
-    class="kiln-chip status-{{ clamp.status }} {% if active_clamp_id == clamp.id %}is-active{% endif %}"
-    href="/?clamp_id={{ clamp.id }}"
-    hx-get="/timeline/partial?clamp_id={{ clamp.id }}"
+    class="kiln-chip status-{{ clamp.status }} {% if active_clamp_id == clamp.id %}is-active{% endif %} {% if clamp.id in lit_clamp_ids %}is-lit{% endif %} {% if clamp.id in burning_clamp_ids %}is-burning{% endif %}"
+    href="/?clamp_id={{ clamp.id }}{% if active_grade %}&grade={{ active_grade|urlencode }}{% endif %}"
+    hx-get="/timeline/partial?clamp_id={{ clamp.id }}{% if active_grade %}&grade={{ active_grade|urlencode }}{% endif %}"
     hx-target="#board"
     hx-swap="innerHTML"
-    hx-push-url="/?clamp_id={{ clamp.id }}"
+    hx-push-url="/?clamp_id={{ clamp.id }}{% if active_grade %}&grade={{ active_grade|urlencode }}{% endif %}"
     title="{{ status_labels.get(clamp.status, clamp.status) }}"
+    data-clamp-id="{{ clamp.id }}"
   >
     <span class="kiln-svg" aria-hidden="true">
       <svg viewBox="0 0 48 56" width="44" height="50">
@@ -41,10 +42,67 @@
   {% endfor %}
 </section>
 
+<section class="grade-row" aria-label="炭品精确筛选">
+  <span class="grade-row-label">炭品精确筛</span>
+  <a
+    class="grade-chip {% if active_grade is none %}is-active{% endif %}"
+    href="/{% if active_clamp_id %}?clamp_id={{ active_clamp_id }}{% endif %}"
+    hx-get="/timeline/partial{% if active_clamp_id %}?clamp_id={{ active_clamp_id }}{% endif %}"
+    hx-target="#board"
+    hx-swap="innerHTML"
+    hx-push-url="/{% if active_clamp_id %}?clamp_id={{ active_clamp_id }}{% endif %}"
+  >全部炭品</a>
+  {% for grade in grade_options %}
+  <a
+    class="grade-chip {% if active_grade == grade %}is-active{% endif %}"
+    href="/?grade={{ grade|urlencode }}{% if active_clamp_id %}&clamp_id={{ active_clamp_id }}{% endif %}"
+    hx-get="/timeline/partial?grade={{ grade|urlencode }}{% if active_clamp_id %}&clamp_id={{ active_clamp_id }}{% endif %}"
+    hx-target="#board"
+    hx-swap="innerHTML"
+    hx-push-url="/?grade={{ grade|urlencode }}{% if active_clamp_id %}&clamp_id={{ active_clamp_id }}{% endif %}"
+    data-grade="{{ grade }}"
+  >{{ grade }}</a>
+  {% endfor %}
+  {% if active_grade is not none and active_grade not in grade_options %}
+  <span class="grade-chip is-active" data-grade="{{ active_grade }}">{{ active_grade }}</span>
+  {% endif %}
+  <form class="grade-form" method="get" action="/">
+    {% if active_clamp_id %}<input type="hidden" name="clamp_id" value="{{ active_clamp_id }}" />{% endif %}
+    <input
+      type="text"
+      name="grade"
+      value="{{ active_grade or '' }}"
+      placeholder="输入炭品字母，整串精确匹配"
+      aria-label="炭品精确筛选"
+    />
+    <button type="submit" class="btn ghost">筛选</button>
+  </form>
+</section>
+
+{% if active_grade is not none %}
+<section class="grade-stats" id="grade-stats" aria-label="炭品筛选统计" data-grade="{{ active_grade }}">
+  <div class="grade-stat">
+    <span class="grade-stat-label">命中班次</span>
+    <strong class="grade-stat-value" id="grade-stat-shifts">{{ grade_stats.shifts }}</strong>
+    <span class="grade-stat-unit">张</span>
+  </div>
+  <div class="grade-stat">
+    <span class="grade-stat-label">涉及炭窑</span>
+    <strong class="grade-stat-value" id="grade-stat-clamps">{{ grade_stats.clamps }}</strong>
+    <span class="grade-stat-unit">座</span>
+  </div>
+  <div class="grade-stat">
+    <span class="grade-stat-label">其中焖烧中</span>
+    <strong class="grade-stat-value" id="grade-stat-burning">{{ grade_stats.burning }}</strong>
+    <span class="grade-stat-unit">座</span>
+  </div>
+</section>
+{% endif %}
+
 <header class="timeline-head">
   <div>
     <h1>焖烧时间轴</h1>
-    <p>点击上方窑剪影筛选班次；登记与出炭在侧抽屉完成，不另开列表页。</p>
+    <p>点击上方窑剪影筛选班次；炭品字母为整串精确匹配，命中窑剪影点亮。登记与出炭在侧抽屉完成，不另开列表页。</p>
   </div>
   {% if active_clamp_id %}
   <button

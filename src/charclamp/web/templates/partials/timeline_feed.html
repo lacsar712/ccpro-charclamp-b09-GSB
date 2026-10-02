@@ -4,7 +4,7 @@
     <div class="timeline-rail" aria-hidden="true">
       <span class="timeline-dot status-{{ shift.clamp.status }}"></span>
     </div>
-    <article class="timeline-card">
+    <article class="timeline-card" data-shift-id="{{ shift.id }}">
       <header class="timeline-card-head">
         <button
           type="button"
@@ -22,9 +22,29 @@
           <span>峰值</span>
           <strong>{% if shift.peak_temp_c is not none %}{{ '%.0f'|format(shift.peak_temp_c) }}℃{% else %}未测{% endif %}</strong>
         </div>
-        <div class="metric">
+        <div class="metric metric-grade">
           <span>炭品</span>
-          <strong>{{ shift.charcoal_grade }}</strong>
+          <form
+            class="grade-edit"
+            method="post"
+            action="/shifts/{{ shift.id }}/grade"
+            aria-label="修改该班次炭品字母"
+          >
+            {% if active_clamp_id %}
+            <input type="hidden" name="clamp_id" value="{{ active_clamp_id }}" />
+            {% endif %}
+            {% if grade %}
+            <input type="hidden" name="grade" value="{{ grade }}" />
+            {% endif %}
+            <input
+              class="grade-input"
+              name="charcoal_grade"
+              value="{{ shift.charcoal_grade }}"
+              maxlength="40"
+              aria-label="炭品字母"
+            />
+            <button type="submit" class="btn tiny">改字母</button>
+          </form>
         </div>
         <div class="metric">
           <span>窑态</span>
@@ -38,7 +58,7 @@
   </li>
   {% else %}
   <li class="timeline-empty">
-    <p>该筛选下暂无焖烧班次。点击「登记班次」写入第一条。</p>
+    <p>该筛选下暂无焖烧班次{% if grade is not none %}（精确字母「{{ grade }}」命中 0 张，三组数均为 0）{% endif %}。点击「登记班次」写入第一条。</p>
   </li>
   {% endfor %}
 </ol>

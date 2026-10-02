@@ -1,11 +1,15 @@
-<section class="kiln-row" aria-label="炭窑筛选">
+<section
+  class="kiln-row{% if grade %} is-filtering{% endif %}"
+  aria-label="炭窑筛选"
+  data-grade="{{ grade or '' }}"
+>
   <a
     class="kiln-chip {% if not active_clamp_id %}is-active{% endif %}"
-    href="/"
-    hx-get="/timeline/partial"
+    href="{% if grade %}?grade={{ grade|urlencode }}{% else %}/{% endif %}"
+    hx-get="/timeline/partial{% if grade %}?grade={{ grade|urlencode }}{% endif %}"
     hx-target="#board"
     hx-swap="innerHTML"
-    hx-push-url="/"
+    hx-push-url="{% if grade %}?grade={{ grade|urlencode }}{% else %}/{% endif %}"
   >
     <span class="kiln-svg kiln-all" aria-hidden="true">
       <svg viewBox="0 0 48 56" width="40" height="46"><path d="M8 48 L14 18 Q24 6 34 18 L40 48 Z" fill="currentColor" opacity=".35"/><path d="M16 48 V22 Q24 12 32 22 V48" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -16,14 +20,19 @@
     </span>
   </a>
   {% for clamp in clamps %}
+  {% set is_hit = grade is not none and clamp.id in hit_clamp_ids %}
+  {% set is_burning_hit = is_hit and clamp.status == 'burning' %}
   <a
-    class="kiln-chip status-{{ clamp.status }} {% if active_clamp_id == clamp.id %}is-active{% endif %}"
-    href="/?clamp_id={{ clamp.id }}"
-    hx-get="/timeline/partial?clamp_id={{ clamp.id }}"
+    class="kiln-chip status-{{ clamp.status }} {% if active_clamp_id == clamp.id %}is-active{% endif %}{% if grade is not none %} {{ 'is-hit' if is_hit else 'is-dimmed' }}{% endif %}"
+    data-clamp-id="{{ clamp.id }}"
+    data-hit="{{ '1' if is_hit else '0' }}"
+    data-burning-hit="{{ '1' if is_burning_hit else '0' }}"
+    href="/?clamp_id={{ clamp.id }}{% if grade %}&grade={{ grade|urlencode }}{% endif %}"
+    hx-get="/timeline/partial?clamp_id={{ clamp.id }}{% if grade %}&grade={{ grade|urlencode }}{% endif %}"
     hx-target="#board"
     hx-swap="innerHTML"
-    hx-push-url="/?clamp_id={{ clamp.id }}"
-    title="{{ status_labels.get(clamp.status, clamp.status) }}"
+    hx-push-url="/?clamp_id={{ clamp.id }}{% if grade %}&grade={{ grade|urlencode }}{% endif %}"
+    title="{{ status_labels.get(clamp.status, clamp.status) }}{% if grade is not none %}{{ '（命中该字母）' if is_hit else '（未命中）' }}{% endif %}"
   >
     <span class="kiln-svg" aria-hidden="true">
       <svg viewBox="0 0 48 56" width="44" height="50">
@@ -41,10 +50,64 @@
   {% endfor %}
 </section>
 
+<form
+  class="grade-bar"
+  method="get"
+  action="/"
+  hx-get="/timeline/partial"
+  hx-target="#board"
+  hx-swap="innerHTML"
+  hx-push-url="true"
+>
+  {% if active_clamp_id %}
+  <input type="hidden" name="clamp_id" value="{{ active_clamp_id }}" />
+  {% endif %}
+  <label class="grade-field">
+    <span>炭品字母精确筛</span>
+    <input
+      name="grade"
+      value="{{ grade or '' }}"
+      placeholder="如 A（精确相等）"
+      maxlength="40"
+      autocomplete="off"
+    />
+  </label>
+  <button type="submit" class="btn">精确筛选</button>
+  {% if grade is not none %}
+  <a
+    class="btn ghost"
+    role="button"
+    href="{% if active_clamp_id %}/?clamp_id={{ active_clamp_id }}{% else %}/{% endif %}"
+    hx-get="/timeline/partial{% if active_clamp_id %}?clamp_id={{ active_clamp_id }}{% endif %}"
+    hx-target="#board"
+    hx-swap="innerHTML"
+    hx-push-url="{% if active_clamp_id %}/?clamp_id={{ active_clamp_id }}{% else %}/{% endif %}"
+  >清除字母筛</a>
+  {% endif %}
+</form>
+
+<ol class="grade-stats" aria-label="筛选计数">
+  <li class="stat" data-stat="shift-count" data-value="{{ shift_count }}">
+    <strong>{{ shift_count }}</strong>
+    <span>命中班次张数</span>
+  </li>
+  <li class="stat" data-stat="clamp-count" data-value="{{ clamp_count }}">
+    <strong>{{ clamp_count }}</strong>
+    <span>命中窑座数（去重）</span>
+  </li>
+  <li class="stat" data-stat="burning-count" data-value="{{ burning_count }}">
+    <strong>{{ burning_count }}</strong>
+    <span>其中焖烧中座数</span>
+  </li>
+</ol>
+
 <header class="timeline-head">
   <div>
-    <h1>焖烧时间轴</h1>
-    <p>点击上方窑剪影筛选班次；登记与出炭在侧抽屉完成，不另开列表页。</p>
+    <h1>焖烧时间轴{% if grade %} · 炭品 {{ grade }}{% endif %}</h1>
+    <p>
+      炭品字母按精确相等筛选；三组数分别对应筛后卡片、点亮剪影、焖烧中点亮子集。
+      {% if grade is not none %}当前精确字母：<strong>{{ grade }}</strong>，含该字母但不等于它的班次不算命中。{% endif %}
+    </p>
   </div>
   {% if active_clamp_id %}
   <button

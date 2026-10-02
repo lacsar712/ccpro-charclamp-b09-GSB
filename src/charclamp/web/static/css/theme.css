@@ -144,6 +144,118 @@ body {
   color: var(--muted);
 }
 
+/* —— 炭品字母精确筛选：命中点亮 / 未命中变暗，点亮集合必须恰为命中窑集合 —— */
+.kiln-row.is-filtering .kiln-chip.is-hit {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 1px rgba(224, 122, 47, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.kiln-row.is-filtering .kiln-chip.is-hit .kiln-svg { color: var(--ember); }
+.kiln-row.is-filtering .kiln-chip.is-hit .kiln-body { opacity: 0.7; }
+/* 焖烧中且命中：保留窑心火，作为点亮集合里的焖烧中子集 */
+.kiln-row.is-filtering .kiln-chip.is-hit.status-burning .kiln-glow {
+  fill: #fbbf24;
+  filter: drop-shadow(0 0 6px #f59e0b);
+}
+/* 未命中一律压暗，连窑心火一起熄掉，避免点亮数与去重窑数对不上 */
+.kiln-row.is-filtering .kiln-chip.is-dimmed {
+  opacity: 0.32;
+  filter: grayscale(0.8);
+}
+.kiln-row.is-filtering .kiln-chip.is-dimmed .kiln-svg { color: #6b6358; }
+.kiln-row.is-filtering .kiln-chip.is-dimmed:hover {
+  transform: none;
+  border-color: var(--line);
+}
+.kiln-row.is-filtering .kiln-chip.is-dimmed .kiln-glow {
+  fill: transparent;
+  filter: none;
+}
+
+/* —— 炭品筛选条 —— */
+.grade-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 2px 14px;
+}
+.grade-field {
+  display: grid;
+  gap: 4px;
+}
+.grade-field span {
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.grade-field input {
+  width: 220px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+.grade-field input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+
+/* —— 三组计数 —— */
+.grade-stats {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.grade-stats .stat {
+  min-width: 150px;
+  padding: 10px 16px;
+  display: grid;
+  gap: 2px;
+  background: linear-gradient(165deg, #221c16, #15120f);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.grade-stats .stat strong {
+  font-size: 1.5rem;
+  color: var(--ember);
+  line-height: 1.1;
+}
+.grade-stats .stat span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* —— 卡片内联改炭品字母 —— */
+.grade-edit {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.grade-input {
+  width: 64px;
+  padding: 4px 8px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+.grade-input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+.btn.tiny {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+
 .timeline-head {
   display: flex;
   align-items: flex-end;

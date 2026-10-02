@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from urllib.parse import quote_plus
 
 from litestar import Controller, MediaType, Request, get, post
 from litestar.enums import RequestEncodingType
 from litestar.params import Body
 from litestar.response import Redirect, Template
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, update
+from sqlalchemy.orm import joinedload, selectinload
 
 from charclamp.domain.models import BurnShift, Clamp, User
 from charclamp.domain.rules import RuleError, assert_can_set_clamp_status, can_mark_clamp_drawn
@@ -47,32 +48,70 @@ def _parse_optional_int(raw: str | None) -> int | None:
         return None
 
 
-async def _load_timeline_context(clamp_id: int | None = None) -> dict[str, Any]:
+def _parse_grade(raw: str | None) -> str | None:
+    """炭品字母筛选值：精确匹配，空串视为不筛选。"""
+    if raw is None:
+        return None
+    grade = raw.strip()
+    return grade or None
+
+
+def _timeline_redirect(clamp_id: int | None, grade: str | None) -> str:
+    params: list[str] = []
+    if clamp_id is not None:
+        params.append(f"clamp_id={clamp_id}")
+    if grade:
+        params.append(f"grade={quote_plus(grade)}")
+    return "/?" + "&".join(params) if params else "/"
+
+
+async def _load_timeline_context(
+    clamp_id: int | None = None, grade: str | None = None
+) -> dict[str, Any]:
     async with SessionLocal() as db:
         clamps = list(
             (
                 await db.execute(
-                    select(Clamp)
-                    .options(selectinload(Clamp.site), selectinload(Clamp.shifts))
-                    .order_by(Clamp.code)
+                    select(Clamp).options(joinedload(Clamp.site)).order_by(Clamp.code)
                 )
             )
             .scalars()
             .all()
         )
+        # 班次 + 所属窑用 joinedload 压成同一条 SELECT：
+        # 三组数（班次张数 / 去重窑数 / 焖烧中窑数）取自同一快照，互不互殴。
         query = (
             select(BurnShift)
-            .options(selectinload(BurnShift.clamp).selectinload(Clamp.site))
+            .options(joinedload(BurnShift.clamp).joinedload(Clamp.site))
             .order_by(BurnShift.started_at.desc())
         )
         if clamp_id is not None:
             query = query.where(BurnShift.clamp_id == clamp_id)
+        if grade is not None:
+            # 精确匹配：必须 =，不能用 LIKE/contains。
+            query = query.where(BurnShift.charcoal_grade == grade)
         shifts = list((await db.execute(query)).scalars().all())
+
+        hit_clamp_ids: set[int] = set()
+        burning_clamp_ids: set[int] = set()
+        for shift in shifts:
+            hit_clamp_ids.add(shift.clamp_id)
+            if shift.clamp.status == Clamp.STATUS_BURNING:
+                burning_clamp_ids.add(shift.clamp_id)
+
         site_name = clamps[0].site.name if clamps else "乌石岗焖烧坞"
+
     return {
         "clamps": clamps,
         "shifts": shifts,
         "active_clamp_id": clamp_id,
+        "grade": grade,
+        # 三组数：与筛后卡片、剪影点亮、焖烧中点亮子集一一对应。
+        "hit_clamp_ids": hit_clamp_ids,
+        "burning_clamp_ids": burning_clamp_ids,
+        "shift_count": len(shifts),
+        "clamp_count": len(hit_clamp_ids),
+        "burning_count": len(burning_clamp_ids),
         "status_labels": STATUS_LABELS,
         "site_name": site_name,
     }
@@ -123,7 +162,8 @@ class TimelineController(Controller):
             return Redirect("/login")
         flash, flash_cat = _pop_flash(request)
         clamp_id = _parse_optional_int(request.query_params.get("clamp_id"))
-        ctx = await _load_timeline_context(clamp_id)
+        grade = _parse_grade(request.query_params.get("grade"))
+        ctx = await _load_timeline_context(clamp_id, grade)
         return Template(
             template_name="timeline.html",
             context={
@@ -139,7 +179,8 @@ class TimelineController(Controller):
         if not request.user:
             return Redirect("/login")
         clamp_id = _parse_optional_int(request.query_params.get("clamp_id"))
-        ctx = await _load_timeline_context(clamp_id)
+        grade = _parse_grade(request.query_params.get("grade"))
+        ctx = await _load_timeline_context(clamp_id, grade)
         return Template(
             template_name="partials/board.html",
             context={
@@ -172,7 +213,7 @@ class TimelineController(Controller):
             result = await db.execute(
                 select(Clamp)
                 .where(Clamp.id == clamp_id)
-                .options(selectinload(Clamp.shifts), selectinload(Clamp.site))
+                .options(selectinload(Clamp.shifts), joinedload(Clamp.site))
             )
             clamp = result.scalar_one_or_none()
             if not clamp:
@@ -225,6 +266,38 @@ class ShiftController(Controller):
         _set_flash(request, "焖烧班次已登记", "ok")
         return Redirect(f"/?clamp_id={clamp_id}")
 
+    @post("/{shift_id:int}/grade")
+    async def set_grade(
+        self,
+        request: Request,
+        shift_id: int,
+        data: dict[str, Any] = Body(media_type=RequestEncodingType.URL_ENCODED),
+    ) -> Redirect:
+        """改某班次的炭品字母。单行原子 UPDATE，两人各改各的班次互不覆盖。"""
+        if not request.user:
+            return Redirect("/login")
+        grade = (data.get("charcoal_grade") or "").strip()
+        ret_clamp_id = _parse_optional_int(data.get("clamp_id"))
+        ret_grade = _parse_grade(data.get("grade"))
+        if not grade:
+            _set_flash(request, "炭品字母不能为空", "error")
+            return Redirect(_timeline_redirect(ret_clamp_id, ret_grade))
+        if len(grade) > 40:
+            _set_flash(request, "炭品字母过长（最多 40 字符）", "error")
+            return Redirect(_timeline_redirect(ret_clamp_id, ret_grade))
+        async with SessionLocal() as db:
+            result = await db.execute(
+                update(BurnShift)
+                .where(BurnShift.id == shift_id)
+                .values(charcoal_grade=grade)
+            )
+            await db.commit()
+        if result.rowcount == 0:
+            _set_flash(request, "班次不存在，炭品未改", "error")
+        else:
+            _set_flash(request, f"班次炭品已改为 {grade}", "ok")
+        return Redirect(_timeline_redirect(ret_clamp_id, ret_grade))
+
 
 class ClampController(Controller):
     path = "/clamps"
@@ -244,7 +317,7 @@ class ClampController(Controller):
             result = await db.execute(
                 select(Clamp)
                 .where(Clamp.id == clamp_id)
-                .options(selectinload(Clamp.shifts))
+                .options(joinedload(Clamp.shifts))
             )
             clamp = result.scalar_one_or_none()
             if not clamp:
